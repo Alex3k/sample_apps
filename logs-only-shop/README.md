@@ -19,9 +19,30 @@ inserts successful orders into PostgreSQL. Catalog reads products from PostgreSQ
 
 Python services emit plain-text business logs plus Gunicorn access logs. Nginx and
 PostgreSQL emit their normal logs. Browser logs remain in its developer console.
-Logs are not forwarded to Grafana. There is no OpenTelemetry SDK, auto-instrumentation,
-collector, trace exporter, application metrics endpoint, or metrics exporter.
-PostgreSQL's internal statistics are not an exported application metrics pipeline.
+Logs are not forwarded to Grafana.
+
+## OpenTelemetry
+
+The Python services initialise the OpenTelemetry SDK in each Gunicorn worker and
+flush it when the worker exits. Flask, requests, and psycopg are auto-instrumented,
+and checkout propagates trace context to catalog and payment. Checkout also records
+a `checkout.payment` span plus `checkout.outcome` and `checkout.duration` metrics with
+bounded `outcome` (`approved`, `declined`, `dependency_failed`) and `payment.scenario`
+attributes.
+
+No collector is included and no endpoint is hard-coded. Traces and metrics are
+exported over OTLP/HTTP only when `OTEL_EXPORTER_OTLP_ENDPOINT` (or a signal-specific
+endpoint) is set; otherwise telemetry is a no-op. Compose passes these variables
+through from your shell:
+
+```sh
+export OTEL_EXPORTER_OTLP_ENDPOINT=<your OTLP endpoint>
+export OTEL_EXPORTER_OTLP_HEADERS=<auth headers, if required>
+export OTEL_RESOURCE_ATTRIBUTES=deployment.environment=dev
+docker compose up --build -d
+```
+
+`OTEL_SERVICE_NAME` defaults to each service's `SERVICE` value.
 
 ## Scenarios
 
