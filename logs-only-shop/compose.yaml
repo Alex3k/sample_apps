@@ -1,8 +1,13 @@
 name: ihub-logs-only-shop
+x-otel-environment: &otel-environment
+  OTEL_EXPORTER_OTLP_ENDPOINT:
+  OTEL_EXPORTER_OTLP_HEADERS:
+  OTEL_RESOURCE_ATTRIBUTES:
 x-service: &service
   build: .
   init: true
   environment: &environment
+    <<: *otel-environment
     DATABASE_URL: postgresql://shop:local-demo-only@db:5432/shop
   depends_on:
     db:
@@ -30,6 +35,7 @@ services:
   payment:
     <<: *service
     environment:
+      <<: *otel-environment
       SERVICE: payment
   db:
     image: postgres:17-alpine
